@@ -8,11 +8,12 @@ function ErrorText({ message }) {
 }
 
 function Lobby({ game }) {
+  const [name, setName] = useState('');
   const [code, setCode] = useState('');
 
   function onSubmit(event) {
     event.preventDefault();
-    game.joinGame(code);
+    game.joinGame(code, name);
   }
 
   return (
@@ -20,6 +21,15 @@ function Lobby({ game }) {
       <h1>Jeopardy Player</h1>
       <p>Create a game from an archived episode, or join one with an invitation code.</p>
       <form onSubmit={onSubmit}>
+        <label htmlFor="join-name">Your name</label>
+        <input
+          id="join-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={24}
+          autoComplete="nickname"
+          required
+        />
         <label htmlFor="invitation-code">Invitation code</label>
         <input
           id="invitation-code"
@@ -42,17 +52,27 @@ function Lobby({ game }) {
 }
 
 function CreateGame({ game }) {
+  const [name, setName] = useState('');
   const [url, setUrl] = useState('');
 
   function onSubmit(event) {
     event.preventDefault();
-    game.createGame(url);
+    game.createGame(url, name);
   }
 
   return (
     <main>
       <h1>New game</h1>
       <form onSubmit={onSubmit}>
+        <label htmlFor="create-name">Your name</label>
+        <input
+          id="create-name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={24}
+          autoComplete="nickname"
+          required
+        />
         <label htmlFor="archive-url">J-Archive URL</label>
         <input
           id="archive-url"

@@ -95,15 +95,15 @@ button:disabled {
   right: 0;
   bottom: 0;
   display: flex;
-  justify-content: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0;
   background: #060ce9;
   color: #fff;
 }
 
 .player-score {
-  min-width: 8rem;
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
   text-align: center;
 }
 
@@ -280,6 +280,38 @@ button.clue-cell {
   color: #ffcc00;
   font-size: 1.25rem;
   font-weight: 700;
+}
+
+.stage .player-score .submitted-answer {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 1.15rem);
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 0.8rem);
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  background: #ffcc00;
+  color: #000;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+  z-index: 2;
+}
+
+.stage .player-score .submitted-answer::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  border-width: 10px 9px 0;
+  border-style: solid;
+  border-color: #ffcc00 transparent transparent;
 }
 
 .stage .player-score .selector-star {

@@ -169,11 +169,11 @@ export function useGameSession() {
     showLobby() {
       dispatch({ type: 'show-lobby' });
     },
-    createGame(url) {
+    createGame(url, name) {
       dispatch({ type: 'pending' });
-      if (!send({ type: 'create', url })) return;
+      if (!send({ type: 'create', url, name })) return;
     },
-    joinGame(sessionId) {
+    joinGame(sessionId, name) {
       const stored = readStoredSession();
       const normalized = sessionId.trim().toUpperCase();
       const playerId = stored?.sessionId === normalized ? stored.playerId : readLeft()[normalized];
@@ -182,6 +182,7 @@ export function useGameSession() {
         type: 'join',
         sessionId: normalized,
         playerId,
+        name,
       });
     },
     leaveGame() {

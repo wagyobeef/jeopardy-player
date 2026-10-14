@@ -42,7 +42,7 @@ test('creating a session logs the parsed game and sends it to the client', async
     async () => ({ ok: true, game }),
     (line) => logs.push(line),
     socket,
-    JSON.stringify({ type: 'create', url: 'https://j-archive.com/showgame.php?game_id=8491' }),
+    JSON.stringify({ type: 'create', url: 'https://j-archive.com/showgame.php?game_id=8491', name: 'Alex' }),
   );
 
   assert.equal(logs.length, 2);
@@ -52,6 +52,7 @@ test('creating a session logs the parsed game and sends it to the client', async
   assert.equal(socket.sent[0].phase, 'board');
   assert.equal(JSON.stringify(socket.sent[0]).includes('SECRET_ANSWER'), false);
   assert.equal(socket.sent[0].cells.find((cell) => cell.column === 1 && cell.row === 1).value, 200);
+  assert.equal(socket.sent[0].players[0].name, 'Alex');
 });
 
 test('an unknown invitation code returns an error', async () => {
@@ -61,7 +62,7 @@ test('an unknown invitation code returns an error', async () => {
     async () => ({ ok: false, error: 'unused' }),
     () => {},
     socket,
-    JSON.stringify({ type: 'join', sessionId: 'ZZZZZZ' }),
+    JSON.stringify({ type: 'join', sessionId: 'ZZZZZZ', name: 'Sam' }),
   );
 
   assert.deepEqual(socket.sent[0], {

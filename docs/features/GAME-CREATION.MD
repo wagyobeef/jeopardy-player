@@ -8,7 +8,7 @@ When users first enter the site, it will load an existing game session if the us
 ---
 
 ## Game Creation
-When a user creates a new game session, it will ask for the URL of the j-archive.com game that the user wants to play. 
+When a user creates a new game session, it will ask for their name and the URL of the j-archive.com game that the user wants to play. 
 
 If the URL is valid, a new game session is created; the URL will be scraped to store the questions and answers data for the game.
 
@@ -50,7 +50,7 @@ Final Jeopardy is one category, one question, and one answer. It has no grid and
 ---
 
 ## Joining a Game
-A user can join a game by inputting a game invitation code. If they were already part of the game in progress, then they will resume as the same player with the same score.
+A user can join a game by inputting their name and a game invitation code. If they were already part of the game in progress, then they will resume as the same player with the same score. The name they enter is shown to the other players.
 
 When a player creates or joins a game, they will be given a player_id associated with the game session. The player_id is stored locally, so they will be able to resume the game, even if the page is refreshed or they have to step away.
 

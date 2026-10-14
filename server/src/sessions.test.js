@@ -19,6 +19,19 @@ function fakeSocket() {
   };
 }
 
+test('players keep the names they enter', () => {
+  const store = createStore();
+  const { session, player } = store.createSession(game, 'Alex');
+  const joined = store.join(session.id, undefined, 'Sam');
+  const socket = fakeSocket();
+  store.attach(session, player.id, socket);
+  store.broadcast(session);
+
+  assert.equal(player.name, 'Alex');
+  assert.equal(joined.player.name, 'Sam');
+  assert.deepEqual(socket.sent[0].players.map((candidate) => candidate.name), ['Alex', 'Sam']);
+});
+
 test('a joined player resumes the same score', () => {
   const store = createStore();
   const { session } = store.createSession(game);

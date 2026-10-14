@@ -11,8 +11,8 @@ function createCode() {
   return code;
 }
 
-function createPlayer() {
-  return { id: crypto.randomUUID(), score: 0 };
+function createPlayer(name) {
+  return { id: crypto.randomUUID(), score: 0, name };
 }
 
 function normalizeCode(value) {
@@ -27,36 +27,40 @@ export function createStore() {
   }
 
   return {
-    createSession(game) {
+    createSession(game, name) {
       let id = createCode();
       while (sessions.has(id)) id = createCode();
-      const player = createPlayer();
+      const player = createPlayer(name);
       const session = { id, game, players: [player], departed: [], sockets: new Map(), play: null };
       session.play = createPlay(session.players);
       sessions.set(id, session);
       return { session, player };
     },
 
-    join(sessionId, playerId) {
+    join(sessionId, playerId, name) {
       const session = findSession(sessionId);
       if (!session) return { ok: false, error: 'No game found for that invitation code.' };
 
       const existing = typeof playerId === 'string'
         ? session.players.find((player) => player.id === playerId)
         : undefined;
-      if (existing) return { ok: true, session, player: existing };
+      if (existing) {
+        if (name) existing.name = name;
+        return { ok: true, session, player: existing };
+      }
 
       const departedIndex = typeof playerId === 'string'
         ? session.departed.findIndex((player) => player.id === playerId)
         : -1;
       if (departedIndex !== -1) {
         const [player] = session.departed.splice(departedIndex, 1);
+        if (name) player.name = name;
         session.players.push(player);
         restorePlayer(session, player);
         return { ok: true, session, player };
       }
 
-      const player = createPlayer();
+      const player = createPlayer(name);
       session.players.push(player);
       addPlayer(session, player.id);
       return { ok: true, session, player };

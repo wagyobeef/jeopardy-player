@@ -43,6 +43,14 @@ function playAction(store, socket, run) {
 }
 
 const INVALID_URL = 'Enter a full j-archive.com game URL, like https://j-archive.com/showgame.php?game_id=8491';
+const INVALID_NAME = 'Enter a name up to 24 characters.';
+
+function readName(value) {
+  if (typeof value !== 'string') return null;
+  const name = value.trim();
+  if (!name || name.length > 24) return null;
+  return name;
+}
 
 export async function handleMessage(store, loadGame, log, socket, raw) {
   let message;
@@ -54,6 +62,11 @@ export async function handleMessage(store, loadGame, log, socket, raw) {
   if (!message || typeof message !== 'object') return;
 
   if (message.type === 'create') {
+    const name = readName(message.name);
+    if (!name) {
+      send(socket, { type: 'error', message: INVALID_NAME });
+      return;
+    }
     if (typeof message.url !== 'string') {
       send(socket, { type: 'error', message: INVALID_URL });
       return;
@@ -65,7 +78,7 @@ export async function handleMessage(store, loadGame, log, socket, raw) {
       return;
     }
 
-    const { session, player } = store.createSession(loaded.game);
+    const { session, player } = store.createSession(loaded.game, name);
     store.detachSocket(socket);
     store.attach(session, player.id, socket);
     log(`Created game session ${session.id} for archive game ${loaded.game.id}`);
@@ -80,9 +93,16 @@ export async function handleMessage(store, loadGame, log, socket, raw) {
       return;
     }
 
+    const name = readName(message.name);
+    if (!name) {
+      send(socket, { type: 'error', message: INVALID_NAME });
+      return;
+    }
+
     const result = store.join(
       message.sessionId,
       typeof message.playerId === 'string' ? message.playerId : undefined,
+      name,
     );
     if (!result.ok) {
       send(socket, { type: 'error', message: result.error });

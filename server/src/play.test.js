@@ -83,16 +83,22 @@ test('answers are revealed after both players respond, then only correct players
   const current = session([clue()]);
   selectClue(current, 'p1', 1, 1);
   assert.equal(submitAnswer(current, 'p1', 'mine', 1_000).startCountdown, undefined);
-  assert.equal(view(current, 'p1').players.find((player) => player.isYou).status, 'Submitted');
+  const waiting = view(current, 'p1');
+  assert.equal(waiting.players.find((player) => player.isYou).status, 'Submitted');
+  assert.equal(waiting.players.every((player) => player.submittedAnswer == null), true);
 
   const ready = submitAnswer(current, 'p2', 'theirs', 1_000);
   assert.equal(ready.startCountdown, true);
-  assert.equal(present(current, 'p1', 1_500).countdownSeconds, 1);
+  const countdown = present(current, 'p1', 1_500);
+  assert.equal(countdown.countdownSeconds, 1);
+  assert.equal(countdown.players.every((player) => player.submittedAnswer == null), true);
   assert.equal(present(current, 'p1', 1_500).yourAnswer, null);
   assert.equal(view(current).active.answer, null);
 
   assert.equal(reveal(current), true);
   assert.equal(view(current).active.answer, 'Answer text');
+  assert.equal(view(current).players.find((player) => player.id === 'p1').submittedAnswer, 'mine');
+  assert.equal(view(current).players.find((player) => player.id === 'p2').submittedAnswer, 'theirs');
   assert.equal(view(current, 'p1').yourAnswer, 'mine');
   assert.equal(view(current, 'p2').yourAnswer, 'theirs');
   judge(current, 'p1', true);
@@ -116,6 +122,8 @@ test('a skipped answer is not judged and does not score', () => {
   assert.equal(view(current, 'p1').yourAction, null);
   assert.equal(view(current, 'p1').yourAnswer, null);
   assert.equal(view(current, 'p2').yourAnswer, 'yes');
+  assert.equal(view(current).players.find((player) => player.id === 'p1').submittedAnswer, null);
+  assert.equal(view(current).players.find((player) => player.id === 'p2').submittedAnswer, 'yes');
   assert.equal(judge(current, 'p1', true).ok, false);
   judge(current, 'p2', true);
   assert.equal(current.players.find((player) => player.id === 'p1').score, 0);

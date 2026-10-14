@@ -9,6 +9,7 @@ function formatScore(score) {
 }
 
 function playerLabel(players, player) {
+  if (player.name) return player.name;
   if (player.isYou) return 'You';
   const index = players.findIndex((candidate) => candidate.id === player.id);
   return `Player ${index + 1}`;
@@ -34,6 +35,7 @@ function ScoreBar({ players }) {
     <footer className="scorebar">
       {players.map((player) => (
         <div className="player-score" key={player.id}>
+          {player.submittedAnswer && <span className="submitted-answer">{player.submittedAnswer}</span>}
           <span>
             {playerLabel(players, player)}
             {player.isSelector && <span className="selector-star" aria-hidden="true">★</span>}

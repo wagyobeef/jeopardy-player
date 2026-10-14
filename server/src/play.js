@@ -410,6 +410,7 @@ export function present(session, playerId, now = Date.now()) {
   const clue = activeClue(session);
   const showQuestion = ['question', 'countdown', 'reveal', 'scored'].includes(play.phase);
   const showAnswer = ['reveal', 'scored'].includes(play.phase);
+  const showSubmittedAnswers = ['reveal', 'scored'].includes(play.phase);
   const showBet = ['question', 'countdown', 'reveal'].includes(play.phase) && clue?.dailyDouble;
   const rankById = play.phase === 'summary' ? ranks(session.players) : null;
   const cells = [];
@@ -458,10 +459,12 @@ export function present(session, playerId, now = Date.now()) {
       : null,
     players: session.players.map((player) => ({
       id: player.id,
+      name: player.name ?? null,
       score: player.score,
       isYou: player.id === playerId,
       isSelector: player.id === play.selectorId && play.phase === 'board',
       status: playerStatus(session, player.id),
+      submittedAnswer: showSubmittedAnswers ? (responseFor(play, player.id)?.answer ?? null) : null,
       delta: play.phase === 'scored' && play.deltas[player.id] != null ? formatDelta(play.deltas[player.id]) : null,
       bet: showBet && responseFor(play, player.id)?.wager != null ? responseFor(play, player.id).wager : null,
       correctCount: play.phase === 'summary' ? (play.correctThisRound[player.id] ?? 0) : null,

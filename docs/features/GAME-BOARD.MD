@@ -26,7 +26,9 @@ Once a question is selected, the question text will be shown on the next screen.
 
 Unlike the Jeopardy game show, each player will have the opportunity to input an answer for any question. If a player has yet to answer or skip the question, text underneath their score will read "Waiting for player...". If they have taken their action, the status will read "Submitted".
 
-Once all players have submitted an answer, "Answer is..." will appear on screen for one second before showing the answer. Each player will then be prompted to report whether they got the question correct. If they skipped the question, they will get no such prompt. "Waiting for player..." will show under a player's score if they have yet to report their answer correctness. Once the answer is shown, there will be a selector at the top of the screen for the player to look at the question or answer in case they want to review. The answer that the player submitted will be under the actual answer (i.e. "Your answer: ")
+Once all players have submitted an answer, "Answer is..." will appear on screen for one second before showing the answer. 
+
+After the answer is shown, the answer that each player inputted will be displayed in a bubble above their place on the bottom bar. Each player will then be prompted to report whether they got the question correct. If they skipped the question, they will get no such prompt. "Waiting for player..." will show under a player's score if they have yet to report their answer correctness. Once the answer is shown, there will be a selector at the top of the screen for the player to look at the question or answer in case they want to review. The answer that the player submitted will be under the actual answer (i.e. "Your answer: ")
 
 After answer correctness is reported, each player who got the question correct will have their scores incremented by the value of the question. If they are receiving points the text next to their score will show how many points they received (e.g. +200). 
 
