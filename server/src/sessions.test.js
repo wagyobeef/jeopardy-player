@@ -32,6 +32,28 @@ test('a joined player resumes the same score', () => {
   assert.equal(session.players.length, 2);
 });
 
+test('leaving keeps a player score for the same invitation code', () => {
+  const store = createStore();
+  const { session, player } = store.createSession(game);
+  player.score = 250;
+  const left = store.leave(session, player.id);
+
+  assert.equal(left.ok, true);
+  assert.equal(session.players.length, 0);
+  assert.equal(session.departed[0].score, 250);
+
+  const returned = store.join(session.id, player.id);
+  assert.equal(returned.ok, true);
+  assert.equal(returned.player.id, player.id);
+  assert.equal(returned.player.score, 250);
+  assert.equal(session.players.length, 1);
+  assert.equal(session.departed.length, 0);
+
+  const stranger = store.join(session.id);
+  assert.notEqual(stranger.player.id, player.id);
+  assert.equal(stranger.player.score, 0);
+});
+
 test('resume does not create a player when the id is unknown', () => {
   const store = createStore();
   const { session } = store.createSession(game);

@@ -2,19 +2,45 @@ import { useEffect, useReducer, useRef } from 'react';
 
 const STORAGE_KEY = 'jeopardy-player';
 
-function readStoredSession() {
+function readStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (typeof parsed.sessionId !== 'string' || typeof parsed.playerId !== 'string') return null;
-    return parsed;
+    return parsed && typeof parsed === 'object' ? parsed : {};
   } catch {
-    return null;
+    return {};
   }
 }
 
+function readLeft() {
+  const left = readStorage().left;
+  if (!left || typeof left !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(left).filter((entry) => typeof entry[0] === 'string' && typeof entry[1] === 'string'),
+  );
+}
+
+function writeStorage({ sessionId, playerId, left = readLeft() }) {
+  const next = {};
+  if (typeof sessionId === 'string' && typeof playerId === 'string') {
+    next.sessionId = sessionId;
+    next.playerId = playerId;
+  }
+  if (Object.keys(left).length > 0) next.left = left;
+  if (!next.sessionId && !next.left) localStorage.removeItem(STORAGE_KEY);
+  else localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+}
+
+function readStoredSession() {
+  const parsed = readStorage();
+  if (typeof parsed.sessionId !== 'string' || typeof parsed.playerId !== 'string') return null;
+  return parsed;
+}
+
 function socketUrl() {
+  const configured = import.meta.env.VITE_WS_URL;
+  if (typeof configured === 'string' && configured.trim() !== '') return configured.trim();
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}/ws`;
 }
@@ -82,16 +108,23 @@ export function useGameSession() {
         }
 
         if (message.type === 'session') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          const left = readLeft();
+          delete left[message.sessionId];
+          writeStorage({
             sessionId: message.sessionId,
             playerId: message.playerId,
-          }));
+            left,
+          });
           dispatch({ type: 'session', session: message });
           return;
         }
 
         if (message.type === 'lobby') {
-          localStorage.removeItem(STORAGE_KEY);
+          const left = readLeft();
+          if (typeof message.sessionId === 'string' && typeof message.playerId === 'string') {
+            left[message.sessionId] = message.playerId;
+          }
+          writeStorage({ left });
           dispatch({ type: 'lobby' });
           return;
         }
@@ -143,12 +176,16 @@ export function useGameSession() {
     joinGame(sessionId) {
       const stored = readStoredSession();
       const normalized = sessionId.trim().toUpperCase();
+      const playerId = stored?.sessionId === normalized ? stored.playerId : readLeft()[normalized];
       dispatch({ type: 'pending' });
       send({
         type: 'join',
         sessionId: normalized,
-        playerId: stored?.sessionId === normalized ? stored.playerId : undefined,
+        playerId,
       });
+    },
+    leaveGame() {
+      send({ type: 'leave' });
     },
     selectQuestion(column, row) {
       send({ type: 'select', column, row });

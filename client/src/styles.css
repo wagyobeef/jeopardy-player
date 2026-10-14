@@ -148,11 +148,27 @@ button:disabled {
   margin: 0;
 }
 
-.invite {
+.header-tools {
   grid-column: 3;
-  justify-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.invite {
   margin: 0;
   text-align: right;
+}
+
+button.leave {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  background: transparent;
+  color: #000;
+  border: 0;
 }
 
 .board {
@@ -174,6 +190,8 @@ button:disabled {
 }
 
 .category {
+  min-height: 3rem;
+  padding: 0.3rem 0.45rem;
   color: #fff;
   font-weight: 700;
   font-size: clamp(0.7rem, 1.1vw, 1rem);
@@ -231,14 +249,19 @@ button.clue-cell {
   gap: 0.75rem;
 }
 
-.review-toggle button[aria-pressed='false'] {
-  background: #fff;
+.review-toggle button {
+  background: transparent;
   color: #000;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.95rem;
 }
 
 .review-toggle button[aria-pressed='true'] {
-  outline: 3px solid #060ce9;
-  outline-offset: 2px;
+  background: #e0e0e0;
+  color: #000;
+  outline: none;
 }
 
 .summary {
@@ -261,7 +284,7 @@ button.clue-cell {
 
 .stage .player-score .selector-star {
   display: inline;
-  margin-right: 0.3rem;
+  margin-left: 0.3rem;
   color: #ffcc00;
 }
 

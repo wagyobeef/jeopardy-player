@@ -113,6 +113,22 @@ export async function handleMessage(store, loadGame, log, socket, raw) {
     return;
   }
 
+  if (message.type === 'leave') {
+    const current = store.playerForSocket(socket);
+    if (!current) {
+      send(socket, { type: 'lobby' });
+      return;
+    }
+
+    const result = store.leave(current.session, current.playerId);
+    store.detachSocket(socket);
+    send(socket, { type: 'lobby', sessionId: current.session.id, playerId: current.playerId });
+    if (!result.ok) return;
+    if (result.startCountdown) scheduleReveal(store, current.session);
+    store.broadcast(current.session);
+    return;
+  }
+
   if (message.type === 'select') {
     playAction(store, socket, (session, playerId) => selectClue(session, playerId, message.column, message.row));
     return;

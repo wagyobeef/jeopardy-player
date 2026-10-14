@@ -14,14 +14,29 @@ function playerLabel(players, player) {
   return `Player ${index + 1}`;
 }
 
+function DoorIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+      <path
+        d="M6 3.5h8.5a1 1 0 0 1 1 1V20H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path d="M15.5 12H21m0 0-2.2-2.2M21 12l-2.2 2.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12.2" cy="12" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 function ScoreBar({ players }) {
   return (
     <footer className="scorebar">
       {players.map((player) => (
         <div className="player-score" key={player.id}>
           <span>
-            {player.isSelector && <span className="selector-star" aria-hidden="true">★</span>}
             {playerLabel(players, player)}
+            {player.isSelector && <span className="selector-star" aria-hidden="true">★</span>}
           </span>
           <div className="score-line">
             <strong>{formatScore(player.score)}</strong>
@@ -149,7 +164,7 @@ function QuestionView({ session, review, setReview, onJudge, onContinue }) {
   );
 }
 
-export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJudge, onContinue }) {
+export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJudge, onContinue, onLeave }) {
   const [review, setReview] = useState('answer');
   const clueKey = session.active ? `${session.active.column}-${session.active.row}-${session.phase}` : session.phase;
 
@@ -161,7 +176,12 @@ export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJu
     <div className="stage">
       <header className="stage-header">
         {session.phase === 'board' && <h1>{session.roundName}</h1>}
-        <p className="invite">Invitation code {session.sessionId}</p>
+        <div className="header-tools">
+          <p className="invite">Invitation code {session.sessionId}</p>
+          <button type="button" className="leave" aria-label="Leave game" onClick={onLeave}>
+            <DoorIcon />
+          </button>
+        </div>
       </header>
       {session.phase === 'board' && <Board session={session} onSelect={onSelect} />}
       {session.phase === 'wager' && (

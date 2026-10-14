@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { addPlayer, createPlay, present } from './play.js';
+import { addPlayer, createPlay, leavePlay, present, restorePlayer } from './play.js';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -31,7 +31,7 @@ export function createStore() {
       let id = createCode();
       while (sessions.has(id)) id = createCode();
       const player = createPlayer();
-      const session = { id, game, players: [player], sockets: new Map(), play: null };
+      const session = { id, game, players: [player], departed: [], sockets: new Map(), play: null };
       session.play = createPlay(session.players);
       sessions.set(id, session);
       return { session, player };
@@ -46,6 +46,16 @@ export function createStore() {
         : undefined;
       if (existing) return { ok: true, session, player: existing };
 
+      const departedIndex = typeof playerId === 'string'
+        ? session.departed.findIndex((player) => player.id === playerId)
+        : -1;
+      if (departedIndex !== -1) {
+        const [player] = session.departed.splice(departedIndex, 1);
+        session.players.push(player);
+        restorePlayer(session, player);
+        return { ok: true, session, player };
+      }
+
       const player = createPlayer();
       session.players.push(player);
       addPlayer(session, player.id);
@@ -57,6 +67,10 @@ export function createStore() {
       const player = session?.players.find((candidate) => candidate.id === playerId);
       if (!session || !player) return { ok: false };
       return { ok: true, session, player };
+    },
+
+    leave(session, playerId) {
+      return leavePlay(session, playerId);
     },
 
     attach(session, playerId, socket) {

@@ -91,6 +91,7 @@ function Session({ game }) {
       onSkip={game.skipAnswer}
       onJudge={game.reportCorrect}
       onContinue={game.continuePlay}
+      onLeave={game.leaveGame}
     />
   );
 }

@@ -89,6 +89,54 @@ export function addPlayer(session, playerId) {
   }
 }
 
+export function restorePlayer(session, player) {
+  addPlayer(session, player.id);
+  const ids = session.players.map((candidate) => candidate.id);
+  if (!ids.includes(session.play.selectorId)) session.play.selectorId = player.id;
+  if (session.play.phase === 'board') {
+    session.play.turnPlayerIds = ids;
+    return;
+  }
+  if (session.play.turnPlayerIds.length === 0 && session.play.phase !== 'summary' && session.play.phase !== 'complete') {
+    session.play.turnPlayerIds = [player.id];
+  }
+}
+
+export function leavePlay(session, playerId, randomInt = crypto.randomInt, now = Date.now()) {
+  const play = session.play;
+  const index = session.players.findIndex((player) => player.id === playerId);
+  if (index === -1) return { ok: false, error: 'That action is not available right now.' };
+
+  const [player] = session.players.splice(index, 1);
+  if (!session.departed) session.departed = [];
+  session.departed.push(player);
+  play.turnPlayerIds = play.turnPlayerIds.filter((id) => id !== playerId);
+  play.pendingContinue = play.pendingContinue.filter((id) => id !== playerId);
+  delete play.responses[playerId];
+  delete play.deltas[playerId];
+
+  if (session.players.length === 0) return { ok: true };
+
+  if (play.phase === 'board' && play.selectorId === playerId) {
+    play.selectorId = session.players[randomInt(session.players.length)].id;
+  }
+
+  if (play.phase === 'wager' && play.turnPlayerIds.every((id) => responseFor(play, id)?.wager != null)) {
+    play.phase = 'question';
+  }
+
+  let startCountdown = false;
+  if (play.phase === 'question' && allAnswered(play)) {
+    startCountdown = Boolean(finishAnswers(play, now).startCountdown);
+  }
+  if (play.phase === 'reveal' && allJudged(play)) applyScores(session);
+  if ((play.phase === 'scored' || play.phase === 'summary') && allContinued(session)) {
+    continuePlay(session, session.players[0].id, randomInt);
+  }
+
+  return { ok: true, startCountdown };
+}
+
 export function selectClue(session, playerId, column, row) {
   const play = session.play;
   if (play.phase !== 'board') return { ok: false, error: 'That action is not available right now.' };
@@ -240,12 +288,17 @@ export function judge(session, playerId, correct) {
 
 function nextSelector(session, randomInt) {
   const play = session.play;
+  const active = new Set(session.players.map((player) => player.id));
   const selectorResponse = responseFor(play, play.selectorId);
-  if (selectorResponse?.correct === true) return play.selectorId;
+  if (selectorResponse?.correct === true && active.has(play.selectorId)) return play.selectorId;
 
-  const correctIds = play.turnPlayerIds.filter((playerId) => responseFor(play, playerId)?.correct === true);
-  if (correctIds.length === 0) return play.selectorId;
-  return correctIds[randomInt(correctIds.length)];
+  const correctIds = play.turnPlayerIds.filter((playerId) => (
+    active.has(playerId) && responseFor(play, playerId)?.correct === true
+  ));
+  if (correctIds.length > 0) return correctIds[randomInt(correctIds.length)];
+  if (active.has(play.selectorId)) return play.selectorId;
+  const remaining = [...active];
+  return remaining[randomInt(remaining.length)];
 }
 
 function lowestSelector(session, randomInt) {

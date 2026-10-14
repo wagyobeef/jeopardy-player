@@ -4,7 +4,9 @@ import {
   continuePlay,
   createPlay,
   judge,
+  leavePlay,
   present,
+  restorePlayer,
   reveal,
   selectClue,
   skipAnswer,
@@ -212,6 +214,44 @@ test('the end of Jeopardy ranks players and Double Jeopardy starts with the lowe
   assert.equal(current.play.selectorId, 'p1');
   assert.equal(view(current).categories[0], 'ONE');
   assert.equal(view(current).players[0].correctCount, null);
+});
+
+test('leaving removes the player and lets everyone else finish the question', () => {
+  const current = session([clue()]);
+  selectClue(current, 'p1', 1, 1);
+  submitAnswer(current, 'p2', 'yes', 1_000);
+  const left = leavePlay(current, 'p1', () => 0, 1_000);
+
+  assert.equal(left.startCountdown, true);
+  assert.equal(current.players.map((player) => player.id).join(','), 'p2');
+  assert.equal(current.departed[0].id, 'p1');
+  assert.equal(current.departed[0].score, 0);
+  assert.equal(current.play.phase, 'countdown');
+});
+
+test('the selector role moves when that player leaves the board', () => {
+  const current = session([clue()]);
+  assert.equal(current.play.selectorId, 'p1');
+  leavePlay(current, 'p1', () => 0);
+  assert.equal(current.play.selectorId, 'p2');
+  assert.equal(view(current, 'p2').yourAction, 'select');
+});
+
+test('a player who returns keeps the score from when they left', () => {
+  const current = session([clue()], [{ id: 'p1', score: 300 }]);
+  selectClue(current, 'p1', 1, 1);
+  leavePlay(current, 'p1');
+  assert.equal(current.players.length, 0);
+  assert.equal(current.play.phase, 'question');
+
+  const player = current.departed[0];
+  current.players.push(player);
+  current.departed.splice(0, 1);
+  restorePlayer(current, player);
+
+  assert.equal(current.players[0].score, 300);
+  assert.equal(current.play.phase, 'question');
+  assert.equal(view(current).yourAction, 'answer');
 });
 
 test('finishing Double Jeopardy stops before Final Jeopardy', () => {
