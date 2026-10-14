@@ -1,0 +1,14 @@
+{
+  "name": "jeopardy-player",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "start": "npm start -w server",
+    "test": "npm test -w server"
+  }
+}
