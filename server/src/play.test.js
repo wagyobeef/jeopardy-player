@@ -115,6 +115,46 @@ test('answers are revealed after both players respond, then only correct players
   assert.equal(scored.players.find((player) => player.id === 'p2').delta, null);
 });
 
+test('one player moves on after a score update without pressing continue', () => {
+  const current = session([
+    clue(),
+    clue({ column: 1, row: 2, question: 'Second', answer: 'Two' }),
+  ], [{ ...first }]);
+  selectClue(current, 'p1', 1, 1);
+  submitAnswer(current, 'p1', 'yes', 0);
+  reveal(current);
+  judge(current, 'p1', true);
+
+  assert.equal(current.play.phase, 'board');
+  assert.equal(current.players[0].score, 200);
+  assert.equal(current.play.selectorId, 'p1');
+  assert.equal(view(current).yourAction, 'select');
+  assert.equal(view(current).cells.find((cell) => cell.column === 1 && cell.row === 1).value, null);
+
+  selectClue(current, 'p1', 1, 2);
+  skipAnswer(current, 'p1', 0);
+  reveal(current);
+  assert.equal(current.play.phase, 'summary');
+  assert.equal(view(current).yourAction, 'continue');
+});
+
+test('leaving the other player skips a continue that is still waiting', () => {
+  const current = session([clue(), clue({ column: 2, row: 1 })]);
+  selectClue(current, 'p1', 1, 1);
+  submitAnswer(current, 'p1', 'yes', 0);
+  submitAnswer(current, 'p2', 'yes', 0);
+  reveal(current);
+  judge(current, 'p1', true);
+  judge(current, 'p2', false);
+  assert.equal(current.play.phase, 'scored');
+
+  leavePlay(current, 'p2', () => 0);
+  assert.equal(current.players.map((player) => player.id).join(','), 'p1');
+  assert.equal(current.play.phase, 'board');
+  assert.equal(current.play.selectorId, 'p1');
+  assert.equal(current.players[0].score, 200);
+});
+
 test('a skipped answer is not judged and does not score', () => {
   const current = session([clue()], [{ ...first }, { ...second }]);
   selectClue(current, 'p1', 1, 1);
@@ -273,9 +313,10 @@ test('skipping Final Jeopardy loses the wager', () => {
   skipAnswer(current, 'p1', 0);
   reveal(current);
 
-  const scored = view(current);
-  assert.equal(scored.players[0].score, -250);
-  assert.equal(scored.players[0].delta, '-250');
+  const summary = view(current);
+  assert.equal(summary.phase, 'summary');
+  assert.equal(summary.players[0].score, -250);
+  assert.equal(summary.yourAction, 'continue');
 });
 
 test('finishing Double Jeopardy starts Final Jeopardy', () => {
@@ -285,7 +326,6 @@ test('finishing Double Jeopardy starts Final Jeopardy', () => {
   selectClue(current, 'p1', 2, 1);
   skipAnswer(current, 'p1', 0);
   reveal(current);
-  continuePlay(current, 'p1');
   assert.equal(current.play.phase, 'summary');
   continuePlay(current, 'p1');
 

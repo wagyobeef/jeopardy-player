@@ -151,7 +151,9 @@ export function leavePlay(session, playerId, randomInt = crypto.randomInt, now =
     startCountdown = Boolean(finishAnswers(play, now).startCountdown);
   }
   if (play.phase === 'reveal' && allJudged(play)) applyScores(session);
-  if ((play.phase === 'scored' || play.phase === 'summary') && allContinued(session)) {
+  if (play.phase === 'scored' && session.players.length === 1) {
+    skipSoloScoreContinue(session, randomInt);
+  } else if ((play.phase === 'scored' || play.phase === 'summary') && allContinued(session)) {
     continuePlay(session, session.players[0].id, randomInt);
   }
 
@@ -282,6 +284,7 @@ function applyScores(session) {
 
   play.phase = 'scored';
   play.pendingContinue = [];
+  skipSoloScoreContinue(session);
 }
 
 export function reveal(session) {
@@ -364,6 +367,11 @@ export function startNextGame(session, game, randomInt = crypto.randomInt) {
   for (const player of session.players) player.score = 0;
   session.play = createPlay(session.players, randomInt);
   return { ok: true };
+}
+
+function skipSoloScoreContinue(session, randomInt = crypto.randomInt) {
+  if (session.play.phase !== 'scored' || session.players.length !== 1) return;
+  continuePlay(session, session.players[0].id, randomInt);
 }
 
 export function continuePlay(session, playerId, randomInt = crypto.randomInt) {
