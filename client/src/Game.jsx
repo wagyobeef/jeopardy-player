@@ -124,19 +124,37 @@ function Countdown() {
 
 function AnswerForm({ onAnswer, onSkip }) {
   const [text, setText] = useState('');
+  const [choice, setChoice] = useState('submit');
 
   function onSubmit(event) {
     event.preventDefault();
     onAnswer(text);
   }
 
+  function onKeyDown(event) {
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      setChoice('skip');
+      return;
+    }
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setChoice('submit');
+      return;
+    }
+    if (event.key === 'Enter' && choice === 'skip') {
+      event.preventDefault();
+      onSkip();
+    }
+  }
+
   return (
-    <form onSubmit={onSubmit}>
+    <form onSubmit={onSubmit} onKeyDown={onKeyDown}>
       <label htmlFor="answer">Your answer</label>
       <input id="answer" value={text} onChange={(event) => setText(event.target.value)} autoComplete="off" autoFocus />
       <div className="actions">
-        <button type="submit">Submit</button>
-        <button type="button" className="secondary" onClick={onSkip}>Skip</button>
+        <button type="submit" className={choice === 'submit' ? 'chosen' : undefined}>Submit</button>
+        <button type="button" className={choice === 'skip' ? 'secondary chosen' : 'secondary'} onClick={onSkip}>Skip</button>
       </div>
     </form>
   );

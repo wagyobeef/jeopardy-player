@@ -51,7 +51,7 @@ After users continue from the final summary screen, we will show a screen with t
 ## Other Interface Notes
 
 ### Keyboard
-The game can be played without a mouse. When a text input is on screen, it is focused, and Enter submits it. Enter also continues after scores update and on the round summary. When it is your turn to choose, the highlight starts on the question that was just played. The arrow keys move from there to another available question, and Enter selects it. After an answer is shown, Correct is focused. The left and right arrow keys move between Correct and Incorrect, and Enter confirms the highlighted choice.
+The game can be played without a mouse. When a text input is on screen, it is focused, and Enter submits it. On an answer, Submit starts selected. The left and right arrow keys move between Submit and Skip, and Enter uses the selected one. Enter also continues after scores update and on the round summary. When it is your turn to choose, the highlight starts on the question that was just played. The arrow keys move from there to another available question, and Enter selects it. After an answer is shown, Correct is focused. The left and right arrow keys move between Correct and Incorrect, and Enter confirms the highlighted choice.
 
 ### Leaving a Game
 On the top right of the screen, there will be a door icon that can be used to exit from the current game. This will reset the user's local storage, so they can enter a new game. This will also remove the player from the game session, so the other players can continue on with the game.
