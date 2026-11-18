@@ -57,8 +57,8 @@ function cellAt(session, column, row) {
 }
 
 function firstQuestion(session) {
-  for (let row = 1; row <= 5; row += 1) {
-    for (let column = 1; column <= 6; column += 1) {
+  for (let column = 1; column <= 6; column += 1) {
+    for (let row = 1; row <= 5; row += 1) {
       if (cellAt(session, column, row)?.value != null) return { column, row };
     }
   }

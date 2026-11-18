@@ -6,7 +6,7 @@ Implemented through Final Jeopardy and the screen for starting another game in t
 
 - Players enter a name when they create or join. That name is shown for them in the game.
 - The board shows categories and point values. Question text stays hidden until a clue is chosen.
-- Only the current selector can choose. Selection follows the rules in GAME-BOARD.MD. On their turn, the highlight starts on the top remaining question in the last column, or the top-left question if that column is empty. Arrow keys move from there and Enter selects it. Text inputs are focused when they appear. Enter submits an answer, a bet, or Continue.
+- Only the current selector can choose. Selection follows the rules in GAME-BOARD.MD. On their turn, the highlight starts on the top remaining question in the last column, or the top question in the leftmost column that still has one. Arrow keys move from there and Enter selects it. Text inputs are focused when they appear. Enter submits an answer, a bet, or Continue.
 - Every player answers or skips. The category is shown above the question. "Answer is..." shows for one second, then the answer and that player's own submitted answer. Each submitted answer appears in a bubble above that player after the answer is shown. Players report correctness, unless they skipped.
 - Scores update by the clue value, or by the Daily Double wager. A wrong or skipped Daily Double loses the wager.
 - Played clues are blank. The end of a round shows rank, score, and how many questions each player got right.
