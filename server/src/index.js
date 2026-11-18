@@ -34,5 +34,5 @@ sockets.on('connection', (socket) => {
 
 const port = Number(process.env.PORT) || 3001;
 server.listen(port, () => {
-  console.log(`Game server listening on ${port}`);
+  console.log(`Game server listening on ${port}, Final Jeopardy ready`);
 });
