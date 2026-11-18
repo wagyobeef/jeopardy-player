@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function formatScore(score) {
   return score.toLocaleString('en-US', {
@@ -52,7 +52,39 @@ function ScoreBar({ players }) {
   );
 }
 
-function Board({ session, onSelect }) {
+function cellAt(session, column, row) {
+  return session.cells.find((cell) => cell.column === column && cell.row === row) ?? null;
+}
+
+function firstQuestion(session) {
+  for (let row = 1; row <= 5; row += 1) {
+    for (let column = 1; column <= 6; column += 1) {
+      if (cellAt(session, column, row)?.value != null) return { column, row };
+    }
+  }
+  return { column: 1, row: 1 };
+}
+
+function moveCursor(session, cursor, key) {
+  const step = {
+    ArrowUp: [0, -1],
+    ArrowDown: [0, 1],
+    ArrowLeft: [-1, 0],
+    ArrowRight: [1, 0],
+  }[key];
+  if (!step) return cursor;
+
+  let column = cursor.column + step[0];
+  let row = cursor.row + step[1];
+  while (column >= 1 && column <= 6 && row >= 1 && row <= 5) {
+    if (cellAt(session, column, row)?.value != null) return { column, row };
+    column += step[0];
+    row += step[1];
+  }
+  return cursor;
+}
+
+function Board({ session, onSelect, cursor }) {
   const rows = [1, 2, 3, 4, 5].map((row) => (
     session.cells
       .filter((cell) => cell.row === row)
@@ -66,11 +98,14 @@ function Board({ session, onSelect }) {
       ))}
       {rows.flat().map((cell) => {
         const key = `${cell.column}-${cell.row}`;
-        if (cell.value == null) return <div className="clue-cell blank" key={key} />;
-        if (!cell.selectable) return <div className="clue-cell" key={key}>{formatScore(cell.value)}</div>;
+        const targeted = cursor?.column === cell.column && cursor?.row === cell.row;
+        const className = `clue-cell${cell.value == null ? ' blank' : ''}${targeted ? ' keyboard-target' : ''}`;
+        if (cell.value == null || !cell.selectable) {
+          return <div className={className} key={key}>{cell.value == null ? '' : formatScore(cell.value)}</div>;
+        }
         return (
           <button
-            className="clue-cell"
+            className={className}
             key={key}
             type="button"
             onClick={() => onSelect(cell.column, cell.row)}
@@ -98,7 +133,7 @@ function AnswerForm({ onAnswer, onSkip }) {
   return (
     <form onSubmit={onSubmit}>
       <label htmlFor="answer">Your answer</label>
-      <input id="answer" value={text} onChange={(event) => setText(event.target.value)} autoComplete="off" />
+      <input id="answer" value={text} onChange={(event) => setText(event.target.value)} autoComplete="off" autoFocus />
       <div className="actions">
         <button type="submit">Submit</button>
         <button type="button" className="secondary" onClick={onSkip}>Skip</button>
@@ -124,6 +159,7 @@ function WagerForm({ maxWager, onWager }) {
         value={amount}
         onChange={(event) => setAmount(event.target.value)}
         autoComplete="off"
+        autoFocus
         required
       />
       <p>Bet from 0 to {maxWager}.</p>
@@ -155,6 +191,7 @@ function NextGameForm({ pending, onNext }) {
         onChange={(event) => setUrl(event.target.value)}
         placeholder="https://j-archive.com/showgame.php?game_id=8491"
         autoComplete="off"
+        autoFocus
         required
       />
       <div className="actions centered">
@@ -186,8 +223,24 @@ function QuestionView({ session, review, setReview, onJudge, onContinue }) {
       )}
       {session.phase === 'countdown' && <Countdown />}
       {session.yourAction === 'judge' && (
-        <div className="actions centered">
-          <button type="button" onClick={() => onJudge(true)}>Correct</button>
+        <div
+          className="actions centered judge"
+          onKeyDown={(event) => {
+            const buttons = [...event.currentTarget.querySelectorAll('button')];
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              const active = document.activeElement;
+              (buttons.includes(active) ? active : buttons[0])?.click();
+              return;
+            }
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            const index = buttons.indexOf(document.activeElement);
+            const next = event.key === 'ArrowRight' ? index + 1 : index - 1;
+            buttons[Math.min(buttons.length - 1, Math.max(0, index === -1 ? 0 : next))]?.focus();
+          }}
+        >
+          <button type="button" onClick={() => onJudge(true)} autoFocus>Correct</button>
           <button type="button" className="secondary" onClick={() => onJudge(false)}>Incorrect</button>
         </div>
       )}
@@ -200,11 +253,57 @@ function QuestionView({ session, review, setReview, onJudge, onContinue }) {
 
 export function Game({ session, error, pending, onSelect, onWager, onAnswer, onSkip, onJudge, onContinue, onLeave, onNext }) {
   const [review, setReview] = useState('answer');
+  const [cursor, setCursor] = useState({ column: 1, row: 1 });
+  const lastClue = useRef(null);
+  const wasChoosing = useRef(false);
   const clueKey = session.active ? `${session.active.column}-${session.active.row}-${session.phase}` : session.phase;
+  const choosing = session.phase === 'board' && session.yourAction === 'select';
 
   useEffect(() => {
     setReview('answer');
   }, [clueKey]);
+
+  useEffect(() => {
+    if (session.active?.column && session.active?.row) {
+      lastClue.current = { column: session.active.column, row: session.active.row };
+    }
+  }, [session.active]);
+
+  useEffect(() => {
+    if (choosing && !wasChoosing.current) {
+      setCursor(lastClue.current ?? firstQuestion(session));
+    }
+    wasChoosing.current = choosing;
+  }, [choosing, session]);
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+      if (typing) return;
+      if (event.repeat && event.key === 'Enter') return;
+
+      if (choosing && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+        setCursor((current) => moveCursor(session, current, event.key));
+        return;
+      }
+
+      if (event.key !== 'Enter') return;
+      if (choosing) {
+        event.preventDefault();
+        const cell = cellAt(session, cursor.column, cursor.row);
+        if (cell?.selectable) onSelect(cell.column, cell.row);
+        return;
+      }
+      if (session.yourAction === 'continue' && !(event.target instanceof HTMLButtonElement)) {
+        event.preventDefault();
+        onContinue();
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [choosing, cursor, onContinue, onSelect, session]);
 
   return (
     <div className="stage">
@@ -217,7 +316,7 @@ export function Game({ session, error, pending, onSelect, onWager, onAnswer, onS
           </button>
         </div>
       </header>
-      {session.phase === 'board' && <Board session={session} onSelect={onSelect} />}
+      {session.phase === 'board' && <Board session={session} onSelect={onSelect} cursor={choosing ? cursor : null} />}
       {session.phase === 'wager' && (
         <div className="prompt">
           {session.roundName === 'Final Jeopardy' ? (
