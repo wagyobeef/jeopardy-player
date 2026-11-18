@@ -76,6 +76,7 @@ function reducer(state, action) {
 
 export function useGameSession() {
   const socketRef = useRef(null);
+  const acceptSessions = useRef(true);
   const [state, dispatch] = useReducer(reducer, null, () => ({
     connected: false,
     screen: readStoredSession() ? 'restoring' : 'lobby',
@@ -96,7 +97,9 @@ export function useGameSession() {
       socket.onopen = () => {
         dispatch({ type: 'connected' });
         const stored = readStoredSession();
-        if (stored) socket.send(JSON.stringify({ type: 'resume', ...stored }));
+        if (stored && acceptSessions.current) {
+          socket.send(JSON.stringify({ type: 'resume', ...stored }));
+        }
       };
 
       socket.onmessage = (event) => {
@@ -108,6 +111,7 @@ export function useGameSession() {
         }
 
         if (message.type === 'session') {
+          if (!acceptSessions.current) return;
           const left = readLeft();
           delete left[message.sessionId];
           writeStorage({
@@ -169,11 +173,25 @@ export function useGameSession() {
     showLobby() {
       dispatch({ type: 'show-lobby' });
     },
+    exitRestoring() {
+      acceptSessions.current = false;
+      const stored = readStoredSession();
+      const left = readLeft();
+      if (stored) left[stored.sessionId] = stored.playerId;
+      writeStorage({ left });
+      const socket = socketRef.current;
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ type: 'leave' }));
+      }
+      dispatch({ type: 'lobby' });
+    },
     createGame(url, name) {
+      acceptSessions.current = true;
       dispatch({ type: 'pending' });
       if (!send({ type: 'create', url, name })) return;
     },
     joinGame(sessionId, name) {
+      acceptSessions.current = true;
       const stored = readStoredSession();
       const normalized = sessionId.trim().toUpperCase();
       const playerId = stored?.sessionId === normalized ? stored.playerId : readLeft()[normalized];
@@ -205,6 +223,11 @@ export function useGameSession() {
     },
     continuePlay() {
       send({ type: 'continue' });
+    },
+    startNextGame(url) {
+      acceptSessions.current = true;
+      dispatch({ type: 'pending' });
+      if (!send({ type: 'next', url })) return;
     },
   };
 }

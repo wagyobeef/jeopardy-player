@@ -40,10 +40,13 @@ The gameplay flow will be slightly different for Daily Double questions, as play
 After bets have been submitted, we will be taken to the question text. The bet amount of each player will be shown beneath their score. Players will then submit their answers as with any other question and report their correctness as with any other question. However, the main difference is that, if the player is correct, they will receive as many points as they bet, not the value of the question. If they get the question wrong or skip answering, they will lose the amount of points that they bet, unlike with other questions. The amount of points received or lost will be shown next to each player's score.
 
 ### End of Round
-At the end of each round (i.e. Jeopardy or Double Jeopardy), there will be a summary screen, showing the rank of each player and their score. It will also show how many questions each player got correct. Every player must press a "Continue" button to go to the next round. If a player has not yet pressed the Continue button, "Waiting for player..." will appear below their score.
+At the end of each round (i.e. Jeopardy, Double Jeopardy, or Final Jeopardy), there will be a summary screen, showing the rank of each player and their score. It will show how many questions each player got correct for that round and also the cumulative questions correct if it's not the first round. Every player must press a "Continue" button to go to the next round. If a player has not yet pressed the Continue button, "Waiting for player..." will appear below their score.
 
 ### Final Jeopardy
-WORK IN PROGRESS
+For the final round of the match, the category of Final Jeopardy will be shown without showing the question, and users can bet up to 5000 points. After bets are submitted, users can answer the question using the usual question-answering flow. A user will receive the points betted if they get the answer correct and lose the points betted if they get the answer wrong.
+
+### Final Summary Screen
+After users continue from the final summary screen, we will show a screen with two options: an input where a user can put in the next game URL, which instantly creates a new game for all players in the room. Any user can also leave the current session before a new game is created.
 
 ## Other Interface Notes
 

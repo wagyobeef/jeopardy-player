@@ -55,6 +55,31 @@ test('creating a session logs the parsed game and sends it to the client', async
   assert.equal(socket.sent[0].players[0].name, 'Alex');
 });
 
+test('the final screen starts another game for the same room', async () => {
+  const store = createStore();
+  const { session, player } = store.createSession(game, 'Alex');
+  session.play.phase = 'complete';
+  player.score = 400;
+  const socket = fakeSocket();
+  store.attach(session, player.id, socket);
+
+  await handleMessage(
+    store,
+    async () => ({ ok: true, game: { ...game, id: '2', title: 'Show #2' } }),
+    () => {},
+    socket,
+    JSON.stringify({ type: 'next', url: 'https://j-archive.com/showgame.php?game_id=2' }),
+  );
+
+  const view = socket.sent.at(-1);
+  assert.equal(view.phase, 'board');
+  assert.equal(view.title, 'Show #2');
+  assert.equal(view.sessionId, session.id);
+  assert.equal(view.players[0].name, 'Alex');
+  assert.equal(view.players[0].score, 0);
+  assert.equal(JSON.stringify(view).includes('SECRET_ANSWER'), false);
+});
+
 test('an unknown invitation code returns an error', async () => {
   const socket = fakeSocket();
   await handleMessage(

@@ -132,6 +132,38 @@ function WagerForm({ maxWager, onWager }) {
   );
 }
 
+function correctLabel(player) {
+  if (player.correctTotal == null) return `${player.correctCount} correct`;
+  return `${player.correctCount} correct this round, ${player.correctTotal} total`;
+}
+
+function NextGameForm({ pending, onNext }) {
+  const [url, setUrl] = useState('');
+
+  function onSubmit(event) {
+    event.preventDefault();
+    onNext(url);
+  }
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label htmlFor="next-url">J-Archive URL</label>
+      <input
+        id="next-url"
+        type="url"
+        value={url}
+        onChange={(event) => setUrl(event.target.value)}
+        placeholder="https://j-archive.com/showgame.php?game_id=8491"
+        autoComplete="off"
+        required
+      />
+      <div className="actions centered">
+        <button type="submit" disabled={pending}>{pending ? 'Checking the page…' : 'Start next game'}</button>
+      </div>
+    </form>
+  );
+}
+
 function ClueCategory({ session }) {
   if (!session.active?.category) return null;
   return <p className="clue-category">{session.active.category}</p>;
@@ -166,7 +198,7 @@ function QuestionView({ session, review, setReview, onJudge, onContinue }) {
   );
 }
 
-export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJudge, onContinue, onLeave }) {
+export function Game({ session, error, pending, onSelect, onWager, onAnswer, onSkip, onJudge, onContinue, onLeave, onNext }) {
   const [review, setReview] = useState('answer');
   const clueKey = session.active ? `${session.active.column}-${session.active.row}-${session.phase}` : session.phase;
 
@@ -188,7 +220,12 @@ export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJu
       {session.phase === 'board' && <Board session={session} onSelect={onSelect} />}
       {session.phase === 'wager' && (
         <div className="prompt">
-          <h1>Daily Double</h1>
+          {session.roundName === 'Final Jeopardy' ? (
+            <>
+              <h1>Final Jeopardy</h1>
+              <ClueCategory session={session} />
+            </>
+          ) : <h1>Daily Double</h1>}
           <WagerForm maxWager={session.maxWager} onWager={onWager} />
         </div>
       )}
@@ -214,7 +251,7 @@ export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJu
           <ol className="summary">
             {[...session.players].sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id)).map((player) => (
               <li key={player.id}>
-                {player.rank}. {playerLabel(session.players, player)} — {formatScore(player.score)} — {player.correctCount} correct
+                {player.rank}. {playerLabel(session.players, player)} — {formatScore(player.score)} — {correctLabel(player)}
               </li>
             ))}
           </ol>
@@ -225,8 +262,12 @@ export function Game({ session, error, onSelect, onWager, onAnswer, onSkip, onJu
       )}
       {session.phase === 'complete' && (
         <div className="prompt">
-          <h1>Final Jeopardy</h1>
-          <p>Final Jeopardy is not ready yet.</p>
+          <h1>Next game</h1>
+          <p>Enter another J-Archive URL to start a new game for everyone still here.</p>
+          <NextGameForm pending={pending} onNext={onNext} />
+          <div className="actions centered">
+            <button type="button" className="secondary" onClick={onLeave} disabled={pending}>Leave</button>
+          </div>
         </div>
       )}
       {error && <p className="error" role="alert">{error}</p>}

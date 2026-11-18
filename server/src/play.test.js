@@ -10,6 +10,7 @@ import {
   reveal,
   selectClue,
   skipAnswer,
+  startNextGame,
   submitAnswer,
   submitWager,
 } from './play.js';
@@ -45,6 +46,7 @@ function session(clues, players = [first, second]) {
           clues: [clue({ column: 2, row: 1, value: 400, question: 'Next round', answer: 'Next answer' })],
         },
       ],
+      finalJeopardy: { category: 'FINALS', question: 'Final question', answer: 'Final answer' },
     },
     players: roster,
     play,
@@ -213,6 +215,7 @@ test('the end of Jeopardy ranks players and Double Jeopardy starts with the lowe
   assert.equal(summary.phase, 'summary');
   assert.equal(summary.players.find((player) => player.id === 'p1').rank, 3);
   assert.equal(summary.players.find((player) => player.id === 'p1').correctCount, 1);
+  assert.equal(summary.players.find((player) => player.id === 'p1').correctTotal, null);
   assert.equal(summary.players.find((player) => player.id === 'p2').rank, 1);
   assert.equal(summary.players.find((player) => player.id === 'p3').rank, 1);
 
@@ -262,7 +265,20 @@ test('a player who returns keeps the score from when they left', () => {
   assert.equal(view(current).yourAction, 'answer');
 });
 
-test('finishing Double Jeopardy stops before Final Jeopardy', () => {
+test('skipping Final Jeopardy loses the wager', () => {
+  const current = session([clue()], [{ ...first }]);
+  current.play.roundIndex = 2;
+  current.play.phase = 'wager';
+  submitWager(current, 'p1', 250);
+  skipAnswer(current, 'p1', 0);
+  reveal(current);
+
+  const scored = view(current);
+  assert.equal(scored.players[0].score, -250);
+  assert.equal(scored.players[0].delta, '-250');
+});
+
+test('finishing Double Jeopardy starts Final Jeopardy', () => {
   const current = session([clue()], [{ ...first }]);
   current.play.roundIndex = 1;
   current.play.selectorId = 'p1';
@@ -272,6 +288,88 @@ test('finishing Double Jeopardy stops before Final Jeopardy', () => {
   continuePlay(current, 'p1');
   assert.equal(current.play.phase, 'summary');
   continuePlay(current, 'p1');
+
+  const final = view(current);
+  assert.equal(final.phase, 'wager');
+  assert.equal(final.roundName, 'Final Jeopardy');
+  assert.equal(final.active.category, 'FINALS');
+  assert.equal(final.active.question, null);
+  assert.equal(final.maxWager, 5000);
+  assert.equal(JSON.stringify(final).includes('Final answer'), false);
+  assert.equal(JSON.stringify(final).includes('Final question'), false);
+});
+
+test('Final Jeopardy pays or takes the wager, then a new game keeps the room', () => {
+  const current = session([clue()]);
+  selectClue(current, 'p1', 1, 1);
+  submitAnswer(current, 'p1', 'yes', 0);
+  submitAnswer(current, 'p2', 'yes', 0);
+  reveal(current);
+  judge(current, 'p1', true);
+  judge(current, 'p2', false);
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
+
+  assert.equal(current.play.selectorId, 'p2');
+  selectClue(current, 'p2', 2, 1);
+  skipAnswer(current, 'p1', 0);
+  skipAnswer(current, 'p2', 0);
+  reveal(current);
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
+  const doubleSummary = view(current);
+  assert.equal(doubleSummary.players.find((player) => player.id === 'p1').correctCount, 0);
+  assert.equal(doubleSummary.players.find((player) => player.id === 'p1').correctTotal, 1);
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
+
+  assert.equal(submitWager(current, 'p1', 5001).ok, false);
+  submitWager(current, 'p1', 500);
+  submitWager(current, 'p2', 100);
+  const question = view(current);
+  assert.equal(question.phase, 'question');
+  assert.equal(question.active.question, 'Final question');
+  assert.equal(question.active.answer, null);
+  assert.equal(question.players.find((player) => player.id === 'p1').bet, 500);
+
+  submitAnswer(current, 'p1', 'mine', 0);
+  submitAnswer(current, 'p2', 'nope', 0);
+  reveal(current);
+  judge(current, 'p1', true);
+  judge(current, 'p2', false);
+  const scored = view(current);
+  assert.equal(scored.players.find((player) => player.id === 'p1').score, 700);
+  assert.equal(scored.players.find((player) => player.id === 'p1').delta, '+500');
+  assert.equal(scored.players.find((player) => player.id === 'p2').score, -100);
+  assert.equal(scored.players.find((player) => player.id === 'p2').delta, '-100');
+
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
+  const summary = view(current);
+  assert.equal(summary.phase, 'summary');
+  assert.equal(summary.players.find((player) => player.id === 'p1').correctCount, 1);
+  assert.equal(summary.players.find((player) => player.id === 'p1').correctTotal, 2);
+  continuePlay(current, 'p1');
+  continuePlay(current, 'p2');
   assert.equal(current.play.phase, 'complete');
-  assert.equal(view(current).active, null);
+
+  current.players[0].name = 'Alex';
+  current.departed = [{ id: 'gone', score: 50, name: 'Gone' }];
+  const started = startNextGame(current, {
+    ...current.game,
+    id: '2',
+    title: 'Show #2',
+    finalJeopardy: { category: 'NEXT', question: 'Hidden question', answer: 'Hidden answer' },
+  }, () => 0);
+  const board = view(current);
+  assert.equal(started.ok, true);
+  assert.equal(board.phase, 'board');
+  assert.equal(board.title, 'Show #2');
+  assert.equal(board.players.find((player) => player.id === 'p1').score, 0);
+  assert.equal(board.players.find((player) => player.id === 'p1').name, 'Alex');
+  assert.equal(current.departed.length, 0);
+  assert.equal(current.id, 'GAME');
+  assert.equal(JSON.stringify(board).includes('Hidden answer'), false);
 });

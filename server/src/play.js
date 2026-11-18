@@ -15,7 +15,24 @@ function findClue(session, column, row) {
   return currentBoard(session)?.clues.find((clue) => clue.column === column && clue.row === row) ?? null;
 }
 
+function isFinalRound(session) {
+  return session.play.roundIndex === 2;
+}
+
 function activeClue(session) {
+  if (isFinalRound(session)) {
+    const final = session.game.finalJeopardy;
+    if (!final) return null;
+    return {
+      category: final.category,
+      question: final.question,
+      answer: final.answer,
+      value: null,
+      dailyDouble: false,
+      final: true,
+    };
+  }
+
   const position = session.play.clue;
   if (!position) return null;
   return findClue(session, position.column, position.row);
@@ -77,6 +94,7 @@ export function createPlay(players, randomInt = crypto.randomInt) {
     responses: {},
     played: [],
     correctThisRound: Object.fromEntries(players.map((player) => [player.id, 0])),
+    correctTotal: Object.fromEntries(players.map((player) => [player.id, 0])),
     pendingContinue: [],
     deltas: {},
     revealAt: null,
@@ -86,6 +104,9 @@ export function createPlay(players, randomInt = crypto.randomInt) {
 export function addPlayer(session, playerId) {
   if (session.play.correctThisRound[playerId] == null) {
     session.play.correctThisRound[playerId] = 0;
+  }
+  if (session.play.correctTotal[playerId] == null) {
+    session.play.correctTotal[playerId] = 0;
   }
 }
 
@@ -165,8 +186,8 @@ export function submitWager(session, playerId, amount) {
   }
 
   const clue = activeClue(session);
-  const max = clue.value * 2;
-  if (!Number.isInteger(amount) || amount < 0 || amount > max) {
+  const max = isFinalRound(session) ? FINAL_WAGER_MAX : clue?.value * 2;
+  if (!Number.isInteger(max) || !Number.isInteger(amount) || amount < 0 || amount > max) {
     return { ok: false, error: `Enter a whole number from 0 to ${max}.` };
   }
   if (responseFor(play, playerId)?.wager != null) return { ok: true };
@@ -184,6 +205,7 @@ export function submitWager(session, playerId, amount) {
 }
 
 export const REVEAL_DELAY_MS = 1000;
+export const FINAL_WAGER_MAX = 5000;
 
 function finishAnswers(play, now) {
   if (!allAnswered(play)) return { ok: true };
@@ -242,7 +264,7 @@ function applyScores(session) {
     if (!player || !response) continue;
 
     let delta = null;
-    if (clue.dailyDouble) {
+    if (clue.final || clue.dailyDouble) {
       delta = response.correct === true ? response.wager : -response.wager;
     } else if (response.correct === true) {
       delta = clue.value;
@@ -254,6 +276,7 @@ function applyScores(session) {
     }
     if (response.correct === true) {
       play.correctThisRound[playerId] = (play.correctThisRound[playerId] ?? 0) + 1;
+      play.correctTotal[playerId] = (play.correctTotal[playerId] ?? 0) + 1;
     }
   }
 
@@ -307,14 +330,40 @@ function lowestSelector(session, randomInt) {
   return tied[randomInt(tied.length)].id;
 }
 
+function resetRoundCounts(play, players) {
+  play.correctThisRound = Object.fromEntries(players.map((player) => [player.id, 0]));
+}
+
 function startDoubleJeopardy(session, randomInt) {
   const play = session.play;
   play.roundIndex = 1;
-  play.correctThisRound = Object.fromEntries(session.players.map((player) => [player.id, 0]));
+  resetRoundCounts(play, session.players);
   clearTurn(play);
   play.phase = 'board';
   play.selectorId = lowestSelector(session, randomInt);
   play.turnPlayerIds = session.players.map((player) => player.id);
+}
+
+function startFinalJeopardy(session) {
+  const play = session.play;
+  play.roundIndex = 2;
+  resetRoundCounts(play, session.players);
+  clearTurn(play);
+  play.phase = 'wager';
+  play.selectorId = null;
+  play.turnPlayerIds = session.players.map((player) => player.id);
+}
+
+export function startNextGame(session, game, randomInt = crypto.randomInt) {
+  if (session.play.phase !== 'complete' || session.players.length === 0) {
+    return { ok: false, error: 'That action is not available right now.' };
+  }
+
+  session.game = game;
+  session.departed = [];
+  for (const player of session.players) player.score = 0;
+  session.play = createPlay(session.players, randomInt);
+  return { ok: true };
 }
 
 export function continuePlay(session, playerId, randomInt = crypto.randomInt) {
@@ -328,7 +377,14 @@ export function continuePlay(session, playerId, randomInt = crypto.randomInt) {
 
   if (play.phase === 'summary') {
     if (play.roundIndex === 0) startDoubleJeopardy(session, randomInt);
+    else if (play.roundIndex === 1) startFinalJeopardy(session);
     else play.phase = 'complete';
+    return { ok: true };
+  }
+
+  if (isFinalRound(session)) {
+    clearTurn(play);
+    play.phase = 'summary';
     return { ok: true };
   }
 
@@ -411,7 +467,8 @@ export function present(session, playerId, now = Date.now()) {
   const showQuestion = ['question', 'countdown', 'reveal', 'scored'].includes(play.phase);
   const showAnswer = ['reveal', 'scored'].includes(play.phase);
   const showSubmittedAnswers = ['reveal', 'scored'].includes(play.phase);
-  const showBet = ['question', 'countdown', 'reveal'].includes(play.phase) && clue?.dailyDouble;
+  const showCategory = showQuestion || (isFinalRound(session) && play.phase === 'wager');
+  const showBet = ['question', 'countdown', 'reveal'].includes(play.phase) && (clue?.dailyDouble || clue?.final);
   const rankById = play.phase === 'summary' ? ranks(session.players) : null;
   const cells = [];
 
@@ -436,14 +493,14 @@ export function present(session, playerId, now = Date.now()) {
     playerId,
     title: session.game.title,
     phase: play.phase,
-    roundName: board?.name ?? '',
+    roundName: isFinalRound(session) ? 'Final Jeopardy' : (board?.name ?? ''),
     revealAt: play.phase === 'countdown' ? play.revealAt : null,
     countdownSeconds: play.phase === 'countdown' && play.revealAt
       ? Math.max(0, Math.ceil((play.revealAt - now) / 1000))
       : null,
     yourAction: yourAction(session, playerId),
     yourAnswer: showAnswer ? (responseFor(play, playerId)?.answer ?? null) : null,
-    maxWager: play.phase === 'wager' && clue ? clue.value * 2 : null,
+    maxWager: play.phase === 'wager' ? (isFinalRound(session) ? FINAL_WAGER_MAX : (clue ? clue.value * 2 : null)) : null,
     categories: play.phase === 'board' ? (board?.categories ?? []) : [],
     cells,
     active: clue && play.phase !== 'board' && play.phase !== 'summary' && play.phase !== 'complete'
@@ -452,7 +509,7 @@ export function present(session, playerId, now = Date.now()) {
         row: clue.row,
         value: clue.value,
         dailyDouble: clue.dailyDouble,
-        category: showQuestion ? clue.category : null,
+        category: showCategory ? clue.category : null,
         question: showQuestion ? clue.question : null,
         answer: showAnswer ? clue.answer : null,
       }
@@ -468,6 +525,7 @@ export function present(session, playerId, now = Date.now()) {
       delta: play.phase === 'scored' && play.deltas[player.id] != null ? formatDelta(play.deltas[player.id]) : null,
       bet: showBet && responseFor(play, player.id)?.wager != null ? responseFor(play, player.id).wager : null,
       correctCount: play.phase === 'summary' ? (play.correctThisRound[player.id] ?? 0) : null,
+      correctTotal: play.phase === 'summary' && play.roundIndex > 0 ? (play.correctTotal[player.id] ?? 0) : null,
       rank: rankById ? rankById.get(player.id) : null,
     })),
   };

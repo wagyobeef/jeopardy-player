@@ -52,7 +52,7 @@ Final Jeopardy is one category, one question, and one answer. It has no grid and
 ## Joining a Game
 A user can join a game by inputting their name and a game invitation code. If they were already part of the game in progress, then they will resume as the same player with the same score. The name they enter is shown to the other players.
 
-When a player creates or joins a game, they will be given a player_id associated with the game session. The player_id is stored locally, so they will be able to resume the game, even if the page is refreshed or they have to step away.
+When a player creates or joins a game, they will be given a player_id associated with the game session. The player_id is stored locally, so they will be able to resume the game, even if the page is refreshed or they have to step away. The rejoin screen has an Exit button, so a player can return to the lobby if rejoining does not finish. Their saved score stays with the invitation code.
 
 ---
 

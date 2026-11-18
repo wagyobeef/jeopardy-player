@@ -112,6 +112,8 @@ function Session({ game }) {
       onJudge={game.reportCorrect}
       onContinue={game.continuePlay}
       onLeave={game.leaveGame}
+      onNext={game.startNextGame}
+      pending={game.pending}
     />
   );
 }
@@ -120,7 +122,16 @@ export function App() {
   const game = useGameSession();
 
   if (game.screen === 'restoring') {
-    return <main><h1>Jeopardy Player</h1><p>Rejoining game…</p></main>;
+    return (
+      <main>
+        <h1>Jeopardy Player</h1>
+        <p>Rejoining game…</p>
+        <ErrorText message={game.error} />
+        <div className="actions">
+          <button type="button" className="secondary" onClick={game.exitRestoring}>Exit</button>
+        </div>
+      </main>
+    );
   }
   if (game.screen === 'session' && game.session) return <Session game={game} />;
   if (game.screen === 'create') return <CreateGame game={game} />;

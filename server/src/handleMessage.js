@@ -5,6 +5,7 @@ import {
   reveal,
   selectClue,
   skipAnswer,
+  startNextGame,
   submitAnswer,
   submitWager,
 } from './play.js';
@@ -171,5 +172,45 @@ export async function handleMessage(store, loadGame, log, socket, raw) {
   }
   if (message.type === 'continue') {
     playAction(store, socket, (session, playerId) => continuePlay(session, playerId));
+    return;
+  }
+
+  if (message.type === 'next') {
+    const current = store.playerForSocket(socket);
+    if (!current) {
+      send(socket, { type: 'error', message: 'Join a game before playing.' });
+      return;
+    }
+    if (current.session.play.phase !== 'complete' || current.session.startingNext) {
+      send(socket, { type: 'error', message: 'That action is not available right now.' });
+      return;
+    }
+    if (typeof message.url !== 'string') {
+      send(socket, { type: 'error', message: INVALID_URL });
+      return;
+    }
+
+    current.session.startingNext = true;
+    try {
+      const loaded = await loadGame(message.url);
+      if (!loaded.ok) {
+        send(socket, { type: 'error', message: loaded.error });
+        return;
+      }
+      if (current.session.play.phase !== 'complete' || current.session.players.length === 0) {
+        send(socket, { type: 'error', message: 'That action is not available right now.' });
+        return;
+      }
+
+      const started = startNextGame(current.session, loaded.game);
+      if (!started.ok) {
+        send(socket, { type: 'error', message: started.error });
+        return;
+      }
+      log(`Started next game ${loaded.game.id} in session ${current.session.id}`);
+      store.broadcast(current.session);
+    } finally {
+      current.session.startingNext = false;
+    }
   }
 }
