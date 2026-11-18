@@ -371,7 +371,9 @@ export function startNextGame(session, game, randomInt = crypto.randomInt) {
 
 function skipSoloScoreContinue(session, randomInt = crypto.randomInt) {
   if (session.play.phase !== 'scored' || session.players.length !== 1) return;
-  continuePlay(session, session.players[0].id, randomInt);
+  const playerId = session.players[0].id;
+  if (responseFor(session.play, playerId)?.skipped) return;
+  continuePlay(session, playerId, randomInt);
 }
 
 export function continuePlay(session, playerId, randomInt = crypto.randomInt) {

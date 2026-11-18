@@ -134,8 +134,12 @@ test('one player moves on after a score update without pressing continue', () =>
   selectClue(current, 'p1', 1, 2);
   skipAnswer(current, 'p1', 0);
   reveal(current);
+  const skipped = view(current);
+  assert.equal(skipped.phase, 'scored');
+  assert.equal(skipped.active.answer, 'Two');
+  assert.equal(skipped.yourAction, 'continue');
+  continuePlay(current, 'p1');
   assert.equal(current.play.phase, 'summary');
-  assert.equal(view(current).yourAction, 'continue');
 });
 
 test('leaving the other player skips a continue that is still waiting', () => {
@@ -313,10 +317,12 @@ test('skipping Final Jeopardy loses the wager', () => {
   skipAnswer(current, 'p1', 0);
   reveal(current);
 
-  const summary = view(current);
-  assert.equal(summary.phase, 'summary');
-  assert.equal(summary.players[0].score, -250);
-  assert.equal(summary.yourAction, 'continue');
+  const scored = view(current);
+  assert.equal(scored.phase, 'scored');
+  assert.equal(scored.active.answer, 'Final answer');
+  assert.equal(scored.players[0].score, -250);
+  assert.equal(scored.players[0].delta, '-250');
+  assert.equal(scored.yourAction, 'continue');
 });
 
 test('finishing Double Jeopardy starts Final Jeopardy', () => {
@@ -326,6 +332,9 @@ test('finishing Double Jeopardy starts Final Jeopardy', () => {
   selectClue(current, 'p1', 2, 1);
   skipAnswer(current, 'p1', 0);
   reveal(current);
+  assert.equal(current.play.phase, 'scored');
+  assert.equal(view(current).active.answer, 'Next answer');
+  continuePlay(current, 'p1');
   assert.equal(current.play.phase, 'summary');
   continuePlay(current, 'p1');
 
