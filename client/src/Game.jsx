@@ -65,6 +65,17 @@ function firstQuestion(session) {
   return { column: 1, row: 1 };
 }
 
+function startingQuestion(session, lastClue) {
+  if (lastClue) {
+    for (let row = 1; row <= 5; row += 1) {
+      if (cellAt(session, lastClue.column, row)?.value != null) {
+        return { column: lastClue.column, row };
+      }
+    }
+  }
+  return firstQuestion(session);
+}
+
 function moveCursor(session, cursor, key) {
   const step = {
     ArrowUp: [0, -1],
@@ -289,7 +300,7 @@ export function Game({ session, error, pending, onSelect, onWager, onAnswer, onS
 
   useEffect(() => {
     if (choosing && !wasChoosing.current) {
-      setCursor(lastClue.current ?? firstQuestion(session));
+      setCursor(startingQuestion(session, lastClue.current));
     }
     wasChoosing.current = choosing;
   }, [choosing, session]);
